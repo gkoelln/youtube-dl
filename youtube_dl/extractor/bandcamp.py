@@ -63,7 +63,7 @@ class BandcampIE(InfoExtractor):
                 json_code = m_trackinfo.group(1)
                 data = json.loads(json_code)[0]
                 track_id = compat_str(data['id'])
-                
+
                 if not data.get('file'):
                     raise ExtractorError('Not streamable', video_id=track_id, expected=True)
 
@@ -102,7 +102,7 @@ class BandcampIE(InfoExtractor):
         video_id = self._search_regex(
             r'(?ms)var TralbumData = .*?[{,]\s*id: (?P<id>\d+),?$',
             webpage, 'video id')
-        
+
         track_number = self._search_regex(
             r'"track_num":(?P<track_number>\d+),',
             webpage, 'track number')
@@ -123,7 +123,7 @@ class BandcampIE(InfoExtractor):
 
         artist = info.get('artist')
         title = '%s - %s' % (artist, track) if artist else track
-        
+
         download_formats = {}
         for f in blob['download_formats']:
             name, ext = f.get('name'), f.get('file_extension')
