@@ -56,10 +56,6 @@ class BandcampIE(InfoExtractor):
         album = self._search_regex(
             r'(?ms).*?title\s*?:\s*?"(?P<album>.*?)",',
             webpage, 'album')
-        if not album:
-            album = self._search_regex(
-            r'(?m)title\s*?:\s*?"(?P<album>.*?)",\s*?$',
-            webpage, 'album')
         m_download = re.search(r'freeDownloadPage: "(.*?)"', webpage)
         if not m_download:
             m_trackinfo = re.search(r'trackinfo: (.+),\s*?\n', webpage)
@@ -127,9 +123,7 @@ class BandcampIE(InfoExtractor):
 
         artist = info.get('artist')
         title = '%s - %s' % (artist, track) if artist else track
-        if not album:
-            album = title
-
+        
         download_formats = {}
         for f in blob['download_formats']:
             name, ext = f.get('name'), f.get('file_extension')
