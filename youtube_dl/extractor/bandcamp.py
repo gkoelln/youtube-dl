@@ -47,15 +47,15 @@ class BandcampIE(InfoExtractor):
         mobj = re.match(self._VALID_URL, url)
         title = mobj.group('title')
         webpage = self._download_webpage(url, title)
-        release_year = self._search_regex(
-            r'(?ms).*?release_date"?:\s*?"\d+ \w+ (?P<release_year>\d+)\s*?.*?GMT",',
-            webpage, 'release year')
-        album_artist = self._search_regex(
-            r'(?ms)var EmbedData = .*?[{,]\s*artist:\s*?"(?P<album_artist>.*?)",$',
-            webpage, 'album artist')
         album = self._search_regex(
             r'(?ms).*?title\s*?:\s*?"(?P<album>.*?)",',
             webpage, 'album')
+        album_artist = self._search_regex(
+            r'(?ms)var EmbedData = .*?[{,]\s*artist:\s*?"(?P<album_artist>.*?)",$',
+            webpage, 'album artist')
+        release_year = self._search_regex(
+            r'(?ms).*?release_date"?:\s*?"\d+ \w+ (?P<release_year>\d+)\s*?.*?GMT",',
+            webpage, 'release year')
         m_download = re.search(r'freeDownloadPage: "(.*?)"', webpage)
         if not m_download:
             m_trackinfo = re.search(r'trackinfo: (.+),\s*?\n', webpage)
@@ -66,8 +66,6 @@ class BandcampIE(InfoExtractor):
 
                 if not data.get('file'):
                     raise ExtractorError('Not streamable', video_id=track_id, expected=True)
-
-                track_number = data['track_num']
 
                 formats = []
                 for format_id, format_url in data['file'].items():
@@ -89,10 +87,10 @@ class BandcampIE(InfoExtractor):
                     'formats': formats,
                     'duration': float_or_none(data.get('duration')),
                     'track': data['title'],
-                    'track_number': track_number,
+                    'track_number': data['track_num'],
                     'track_id': track_id,
-                    'album_artist': album_artist,
                     'album': album,
+                    'album_artist': album_artist,
                     'release_year': release_year,
                 }
             else:
@@ -166,10 +164,10 @@ class BandcampIE(InfoExtractor):
             'title': title,
             'thumbnail': info.get('thumb_url'),
             'uploader': info.get('artist'),
-            'formats': formats,
-            'track': track,
-            'track_number': track_number,
             'artist': artist,
+            'track': track,
+            'formats': formats,
+            'track_number': track_number,
             'album': album,
             'album_artist': album_artist,
             'release_year': release_year,
