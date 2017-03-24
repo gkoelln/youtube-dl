@@ -16,10 +16,20 @@ from ..utils import (
 
 
 MSO_INFO = {
+    'Dish': {
+        'name': 'Dish',
+        'username_field': 'username',
+        'password_field': 'password',
+    },
     'DTV': {
         'name': 'DIRECTV',
         'username_field': 'username',
         'password_field': 'password',
+    },
+    'sony_auth-gateway_net': {
+        'name': 'Playstation Vue',
+        'username_field': 'j_username',
+        'password_field': 'j_password',
     },
     'Rogers': {
         'name': 'Rogers',
@@ -30,6 +40,16 @@ MSO_INFO = {
         'name': 'Comcast XFINITY',
         'username_field': 'user',
         'password_field': 'passwd',
+    },
+    'TWC': {
+        'name': 'Time Warner Cable | Spectrum',
+        'username_field': 'Ecom_User_ID',
+        'password_field': 'Ecom_Password',
+    },
+    'Charter_Direct': {
+        'name': 'Charter Spectrum',
+        'username_field': 'IDToken1',
+        'password_field': 'IDToken2',
     },
     'thr030': {
         'name': '3 Rivers Communications'
@@ -1410,11 +1430,54 @@ class AdobePassIE(InfoExtractor):
                     # Normal, non-Comcast flow
                     provider_login_page_res = post_form(
                         provider_redirect_page_res, 'Downloading Provider Login Page')
+                    provider_login_page, urlh = provider_login_page_res
+                    while 'Redirecting...' in provider_login_page:
+                        redirect_url = self._html_search_regex(
+                            r'content="0;\s*url=([^\'"]+)',
+                            provider_login_page, 'meta refresh redirect', default=None)
+                        if redirect_url:
+                            provider_login_page_res = self._download_webpage_handle(
+                                redirect_url, video_id, 'Downloading Provider Login Page')
+                        else:
+                            form_data = self._hidden_inputs(provider_login_page)
+                            provider_login_page_res = self._download_webpage_handle(
+                                urlh.geturl(), video_id, 'Downloading Provider Login Page',
+                                query=form_data)
+                        provider_login_page, urlh = provider_login_page_res
                     mvpd_confirm_page_res = post_form(provider_login_page_res, 'Logging in', {
                         mso_info.get('username_field', 'username'): username,
                         mso_info.get('password_field', 'password'): password,
                     })
+                    mvpd_confirm_page, urlh = mvpd_confirm_page_res
+                    while 'Redirecting...' in mvpd_confirm_page:
+                        redirect_url = self._html_search_regex(
+                            r'content="0;\s*url=([^\'"]+)',
+                            mvpd_confirm_page, 'meta refresh redirect', default=None)
+                        if redirect_url:
+                            mvpd_confirm_page_res = self._download_webpage_handle(
+                                redirect_url, video_id, 'Logging in')
+                        else:
+                            form_data = self._hidden_inputs(mvpd_confirm_page)
+                            mvpd_confirm_page_res = self._download_webpage_handle(
+                                urlh.geturl().replace('firstbookend', 'lastbookend'),
+                                video_id, 'Logging in', query=form_data)
+                        mvpd_confirm_page, urlh = mvpd_confirm_page_res
                     if mso_id != 'Rogers':
+                        mvpd_confirm_page_res = post_form(mvpd_confirm_page_res, 'Confirming Login')
+                        mvpd_confirm_page, urlh = mvpd_confirm_page_res
+                        while 'Redirecting...' in mvpd_confirm_page:
+                            redirect_url = self._html_search_regex(
+                                r'content="0;\s*url=([^\'"]+)',
+                                mvpd_confirm_page, 'meta refresh redirect', default=None)
+                            if redirect_url:
+                                mvpd_confirm_page_res = self._download_webpage_handle(
+                                    redirect_url, video_id, 'Confirming Login')
+                            else:
+                                form_data = self._hidden_inputs(mvpd_confirm_page)
+                                mvpd_confirm_page_res = self._download_webpage_handle(
+                                    urlh.geturl().replace('firstbookend', 'lastbookend'),
+                                    video_id, 'Confirming Login', query=form_data)
+                            mvpd_confirm_page, urlh = mvpd_confirm_page_res
                         post_form(mvpd_confirm_page_res, 'Confirming Login')
 
                 session = self._download_webpage(
@@ -1448,6 +1511,8 @@ class AdobePassIE(InfoExtractor):
                     self._downloader.cache.store(self._MVPD_CACHE, requestor_id, {})
                     count += 1
                     continue
+                if '<error' in authorize:
+                    raise ExtractorError(xml_text(authorize, 'details'), expected=True)
                 authz_token = unescapeHTML(xml_text(authorize, 'authzToken'))
                 requestor_info[guid] = authz_token
                 self._downloader.cache.store(self._MVPD_CACHE, requestor_id, requestor_info)
