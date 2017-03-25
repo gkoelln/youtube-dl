@@ -21,15 +21,15 @@ MSO_INFO = {
         'username_field': 'username',
         'password_field': 'password',
     },
-    'DTV': {
-        'name': 'DIRECTV',
-        'username_field': 'username',
-        'password_field': 'password',
-    },
     'sony_auth-gateway_net': {
         'name': 'Playstation Vue',
         'username_field': 'j_username',
         'password_field': 'j_password',
+    },
+    'DTV': {
+        'name': 'DIRECTV',
+        'username_field': 'username',
+        'password_field': 'password',
     },
     'Rogers': {
         'name': 'Rogers',
@@ -1462,7 +1462,7 @@ class AdobePassIE(InfoExtractor):
                                 urlh.geturl().replace('firstbookend', 'lastbookend'),
                                 video_id, 'Logging in', query=form_data)
                         mvpd_confirm_page, urlh = mvpd_confirm_page_res
-                    if mso_id != 'Rogers':
+                    if '<form ' in mvpd_confirm_page:
                         mvpd_confirm_page_res = post_form(mvpd_confirm_page_res, 'Confirming Login')
                         mvpd_confirm_page, urlh = mvpd_confirm_page_res
                         while 'Redirecting...' in mvpd_confirm_page:
@@ -1478,7 +1478,8 @@ class AdobePassIE(InfoExtractor):
                                     urlh.geturl().replace('firstbookend', 'lastbookend'),
                                     video_id, 'Confirming Login', query=form_data)
                             mvpd_confirm_page, urlh = mvpd_confirm_page_res
-                        post_form(mvpd_confirm_page_res, 'Confirming Login')
+                        if '<form ' in mvpd_confirm_page:
+                            post_form(mvpd_confirm_page_res, 'Confirming Login')
 
                 session = self._download_webpage(
                     self._SERVICE_PROVIDER_TEMPLATE % 'session', video_id,
