@@ -1462,7 +1462,7 @@ class AdobePassIE(InfoExtractor):
                                 urlh.geturl().replace('firstbookend', 'lastbookend'),
                                 video_id, 'Logging in', query=form_data)
                         mvpd_confirm_page, urlh = mvpd_confirm_page_res
-                    if '<form ' in mvpd_confirm_page:
+                    if 'method="post"' in mvpd_confirm_page:
                         mvpd_confirm_page_res = post_form(mvpd_confirm_page_res, 'Confirming Login')
                         mvpd_confirm_page, urlh = mvpd_confirm_page_res
                         while 'Redirecting...' in mvpd_confirm_page:
@@ -1478,7 +1478,7 @@ class AdobePassIE(InfoExtractor):
                                     urlh.geturl().replace('firstbookend', 'lastbookend'),
                                     video_id, 'Confirming Login', query=form_data)
                             mvpd_confirm_page, urlh = mvpd_confirm_page_res
-                        if '<form ' in mvpd_confirm_page:
+                        if 'method="post"' in mvpd_confirm_page:
                             post_form(mvpd_confirm_page_res, 'Confirming Login')
 
                 session = self._download_webpage(
