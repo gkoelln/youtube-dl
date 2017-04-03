@@ -1349,6 +1349,26 @@ class AdobePassIE(InfoExtractor):
                     'Content-Type': 'application/x-www-form-urlencoded',
                 })
 
+        def process_redirects(page_res, video_id, note, lastbookend=False):
+            page, urlh = page_res
+            while 'Redirecting...' in page:
+                redirect_url = self._html_search_regex(
+                    r'content="0;\s*url=([^\'"]+)',
+                    page, 'meta refresh redirect', default=None)
+                if redirect_url:
+                    page_res = self._download_webpage_handle(
+                        redirect_url, video_id, note)
+                else:
+                    form_data = self._hidden_inputs(page)
+                    url = urlh.geturl()
+                    if lastbookend:
+                        url.replace('firstbookend', 'lastbookend')
+                    page_res = self._download_webpage_handle(
+                        url, video_id, note,
+                        query=form_data)
+                page, urlh = page_res
+            return page_res
+
         def raise_mvpd_required():
             raise ExtractorError(
                 'This video is only available for users of participating TV providers. '
@@ -1430,54 +1450,20 @@ class AdobePassIE(InfoExtractor):
                     # Normal, non-Comcast flow
                     provider_login_page_res = post_form(
                         provider_redirect_page_res, 'Downloading Provider Login Page')
-                    provider_login_page, urlh = provider_login_page_res
-                    while 'Redirecting...' in provider_login_page:
-                        redirect_url = self._html_search_regex(
-                            r'content="0;\s*url=([^\'"]+)',
-                            provider_login_page, 'meta refresh redirect', default=None)
-                        if redirect_url:
-                            provider_login_page_res = self._download_webpage_handle(
-                                redirect_url, video_id, 'Downloading Provider Login Page')
-                        else:
-                            form_data = self._hidden_inputs(provider_login_page)
-                            provider_login_page_res = self._download_webpage_handle(
-                                urlh.geturl(), video_id, 'Downloading Provider Login Page',
-                                query=form_data)
-                        provider_login_page, urlh = provider_login_page_res
+                    provider_login_page_res = process_redirects(
+                        provider_login_page_res, video_id, 'Downloading Provider Login Page')
                     mvpd_confirm_page_res = post_form(provider_login_page_res, 'Logging in', {
                         mso_info.get('username_field', 'username'): username,
                         mso_info.get('password_field', 'password'): password,
                     })
+                    mvpd_confirm_page_res = process_redirects(
+                        mvpd_confirm_page_res, video_id, 'Logging in', True)
                     mvpd_confirm_page, urlh = mvpd_confirm_page_res
-                    while 'Redirecting...' in mvpd_confirm_page:
-                        redirect_url = self._html_search_regex(
-                            r'content="0;\s*url=([^\'"]+)',
-                            mvpd_confirm_page, 'meta refresh redirect', default=None)
-                        if redirect_url:
-                            mvpd_confirm_page_res = self._download_webpage_handle(
-                                redirect_url, video_id, 'Logging in')
-                        else:
-                            form_data = self._hidden_inputs(mvpd_confirm_page)
-                            mvpd_confirm_page_res = self._download_webpage_handle(
-                                urlh.geturl().replace('firstbookend', 'lastbookend'),
-                                video_id, 'Logging in', query=form_data)
-                        mvpd_confirm_page, urlh = mvpd_confirm_page_res
                     if 'method="post"' in mvpd_confirm_page:
                         mvpd_confirm_page_res = post_form(mvpd_confirm_page_res, 'Confirming Login')
+                        mvpd_confirm_page_res = process_redirects(
+                            mvpd_confirm_page_res, video_id, 'Confirming Login', True)
                         mvpd_confirm_page, urlh = mvpd_confirm_page_res
-                        while 'Redirecting...' in mvpd_confirm_page:
-                            redirect_url = self._html_search_regex(
-                                r'content="0;\s*url=([^\'"]+)',
-                                mvpd_confirm_page, 'meta refresh redirect', default=None)
-                            if redirect_url:
-                                mvpd_confirm_page_res = self._download_webpage_handle(
-                                    redirect_url, video_id, 'Confirming Login')
-                            else:
-                                form_data = self._hidden_inputs(mvpd_confirm_page)
-                                mvpd_confirm_page_res = self._download_webpage_handle(
-                                    urlh.geturl().replace('firstbookend', 'lastbookend'),
-                                    video_id, 'Confirming Login', query=form_data)
-                            mvpd_confirm_page, urlh = mvpd_confirm_page_res
                         if 'method="post"' in mvpd_confirm_page:
                             post_form(mvpd_confirm_page_res, 'Confirming Login')
 
