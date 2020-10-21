@@ -6,6 +6,7 @@ from ..utils import (
     int_or_none,
     parse_age_limit,
     try_get,
+    url_or_none,
     update_url_query,
 )
 
@@ -63,24 +64,28 @@ class AMCNetworksIE(ThePlatformIE):
             'mbr': 'true',
             'manifest': 'm3u',
         }
-        media_url = self._search_regex(
-            r'window\.platformLinkURL\s*=\s*[\'"]([^\'"]+)',
-            webpage, 'media url')
+        page_data = self._parse_json(self._search_regex(
+            r'window\.__APP_INITIAL_STATE__ = ([^<]+)',
+            webpage, 'page data'), display_id)
+        account_id = page_data['config']['mpx'].get('accountId')
+        player_id = page_data['config']['mpx'].get('playerId')
+        video_id = page_data['pageData']['properties'].get('videoPid')
+        player_url = url_or_none('https://player.theplatform.com/p/%s/%s/embed/select/media/%s?autoPlay=true' % (account_id, player_id, video_id))
+        player_page = self._download_webpage(player_url, display_id)
+        media_url = url_or_none(
+            self._search_regex(
+            r'<link rel="alternate" href=[\'"]([^\'"]+)',
+            player_page, 'media url'))
         theplatform_metadata = self._download_theplatform_metadata(self._search_regex(
             r'link\.theplatform\.com/s/([^?]+)',
             media_url, 'theplatform_path'), display_id)
         info = self._parse_theplatform_metadata(theplatform_metadata)
-        video_id = theplatform_metadata['pid']
         title = theplatform_metadata['title']
         rating = try_get(
             theplatform_metadata, lambda x: x['ratings'][0]['rating'])
-        auth_required = self._search_regex(
-            r'window\.authRequired\s*=\s*(true|false);',
-            webpage, 'auth required')
-        if auth_required == 'true':
-            requestor_id = self._search_regex(
-                r'window\.requestor_id\s*=\s*[\'"]([^\'"]+)',
-                webpage, 'requestor id')
+        video_category = page_data['pageData']['properties'].get('videoCategory')
+        if video_category == 'TVE-Auth':
+            requestor_id = page_data['config']['adobe'].get('resource_default')
             resource = self._get_mvpd_resource(
                 requestor_id, title, video_id, rating)
             query['auth'] = self._extract_mvpd_auth(
